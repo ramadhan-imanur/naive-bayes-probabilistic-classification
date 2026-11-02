@@ -122,39 +122,6 @@ In this test set, 22 diabetic individuals were misclassified as healthy (false n
 
 ---
 
-## Project structure
-
-```text
-├── data/
-│   ├── raw/                         # Raw, immutable clinical datasets
-│   │   ├── diabetes_pima.csv        # Primary Pima Indians Diabetes dataset
-│   │   ├── breast_cancer_wisconsin.csv  # Benchmark dataset (Wisconsin Breast Cancer)
-│   │   └── heart_disease.csv        # Benchmark dataset (Framingham Heart Study)
-│   └── README.md                    # Data provenance, feature dictionaries & DOI metadata
-├── src/                             # Reusable core library (modular Python package)
-│   ├── __init__.py                  # Package exports & versioning
-│   ├── data.py                      # Data ingestion & biological zero imputation pipeline
-│   ├── models.py                    # Gaussian Naïve Bayes modeling & parameter extraction
-│   └── evaluation.py                # Metrics computation, cross-validation & error analysis
-├── outputs/                         # Experiment artifacts & serialized outputs
-│   └── metrics/
-│       └── hasil_eksperimen.json    # Serialized parameters and evaluation metrics
-├── scripts/                         # Auxiliary demonstration & simulation scripts
-│   └── simulate_categorical_nb.py   # Discrete Naïve Bayes simulation with Laplace smoothing
-├── tests/                           # Automated unit test suite (pytest)
-│   ├── __init__.py
-│   ├── test_data.py                 # Tests data loading, imputation logic, and splits
-│   ├── test_models.py               # Tests GaussianNB training and parameter extraction
-│   └── test_evaluation.py           # Tests metric accuracy, confusion matrix, and errors
-├── pyproject.toml                   # Modern PEP 518/621 build & test configurations
-├── requirements.txt                 # Pinned dependencies (including pytest)
-├── run_experiment.py                # CLI pipeline entrypoint (reproducible workflow)
-├── LICENSE                          # MIT License
-└── README.md                        # Technical report, mathematical proofs & results
-```
-
----
-
 ## Getting started
 
 ### Requirements
