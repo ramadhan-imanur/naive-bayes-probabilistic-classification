@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "naive-bayes-probabilistic-classification"
+version = "1.0.0"
+description = "Gaussian Naïve Bayes Probabilistic Classification on Public Clinical Datasets"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "Kelompok 3 - S-1 Matematika FMIPA UNS"}
+]
+keywords = [
+    "machine-learning",
+    "naive-bayes",
+    "probabilistic-modeling",
+    "clinical-diagnosis",
+    "data-science",
+]
+dependencies = [
+    "numpy>=1.24.0",
+    "pandas>=2.0.0",
+    "scikit-learn>=1.3.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]

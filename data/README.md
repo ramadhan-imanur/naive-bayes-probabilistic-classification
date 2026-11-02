@@ -51,12 +51,15 @@ Direktori ini memuat dataset publik riil yang telah diunduh dari repositori ilmi
 ---
 
 ## 3. Cara Penggunaan dalam Skrip Pemodelan
-Dataset dapat dibaca langsung menggunakan pustaka Python `pandas` dari direktori `dataset/`:
+Dataset dapat dibaca langsung menggunakan modul `src.data` atau pustaka `pandas` dari direktori `data/raw/`:
 ```python
 import pandas as pd
+from src.data import load_dataset, clean_clinical_data
 
-# Memuat dataset Pima Indians Diabetes
-df = pd.read_csv('dataset/diabetes_pima.csv')
-X = df.drop(columns=['Outcome'])
-y = df['Outcome']
+# Memuat dan membersihkan dataset Pima Indians Diabetes
+df = load_dataset('data/raw/diabetes_pima.csv')
+df_clean = clean_clinical_data(df)
+
+X = df_clean.drop(columns=['Outcome'])
+y = df_clean['Outcome']
 ```
