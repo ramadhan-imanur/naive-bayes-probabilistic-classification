@@ -1,0 +1,42 @@
+# Konfigurasi Eksperimen Data Science: Gaussian Naïve Bayes
+# Dataset: Pima Indians Diabetes Database
+
+project:
+  name: naive-bayes-probabilistic-classification
+  version: 1.0.0
+  seed: 42
+
+data:
+  raw_path: data/raw/diabetes_pima.csv
+  processed_path: data/processed/diabetes_pima_cleaned.csv
+  target_column: Outcome
+  zero_as_missing_features:
+    - Glucose
+    - BloodPressure
+    - SkinThickness
+    - Insulin
+    - BMI
+  valid_zero_features:
+    - Pregnancies
+
+split:
+  test_size: 0.20
+  stratify: true
+  random_state: 42
+
+model:
+  type: GaussianNB
+  var_smoothing: 1.0e-09
+
+evaluation:
+  cv_folds: 5
+  metrics:
+    - accuracy
+    - precision
+    - recall
+    - f1
+  decision_threshold: 0.50
+
+output:
+  metrics_path: outputs/metrics/hasil_eksperimen.json
+  model_path: models/gaussian_nb.joblib

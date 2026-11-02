@@ -55,6 +55,17 @@ def parse_arguments() -> argparse.Namespace:
         help="Direktori penyimpanan hasil metrik JSON (default: outputs/metrics/)",
     )
     parser.add_argument(
+        "--model-dir",
+        type=str,
+        default=str(PROJECT_ROOT / "models"),
+        help="Direktori penyimpanan bobot model terlatik (default: models/)",
+    )
+    parser.add_argument(
+        "--save-processed",
+        action="store_true",
+        help="Simpan dataset hasil pra-pemrosesan ke data/processed/",
+    )
+    parser.add_argument(
         "--test-size",
         type=float,
         default=0.20,
@@ -190,7 +201,7 @@ def main() -> None:
     print(f"   - False Negative (FN)         : {fn_count} sampel ({err_analysis['false_negatives']['description']})")
     print("   Catatan Kritis: Pada diagnosis medis, meminimalkan FN sangat krusial guna mencegah keterlambatan intervensi klinis.")
 
-    # 8. Simpan Hasil ke JSON
+    # 8. Simpan Hasil ke JSON & Serialisasi Model
     if not args.no_save:
         export_payload = {
             "dataset": "Pima Indians Diabetes",
@@ -213,6 +224,25 @@ def main() -> None:
         output_file = Path(args.output_dir) / "hasil_eksperimen.json"
         save_experiment_results(export_payload, output_file)
         print(f"\n[OUTPUT] Artefak metrik berhasil disimpan ke: {output_file}")
+
+        # Serialisasi model menggunakan joblib
+        try:
+            import joblib
+            model_dir = Path(args.model_dir)
+            model_dir.mkdir(parents=True, exist_ok=True)
+            model_file = model_dir / "gaussian_nb.joblib"
+            joblib.dump(clf.model, model_file)
+            print(f"[MODEL] Model terlatih berhasil diserialisasi ke: {model_file}")
+        except Exception as exc:
+            print(f"[WARN] Gagal menyimpan model joblib: {exc}")
+
+        # Simpan processed dataset jika diminta
+        if args.save_processed:
+            proc_dir = PROJECT_ROOT / "data" / "processed"
+            proc_dir.mkdir(parents=True, exist_ok=True)
+            proc_path = proc_dir / "diabetes_pima_cleaned.csv"
+            df_clean.to_csv(proc_path, index=False)
+            print(f"[DATA] Data bersih tersimpan ke: {proc_path}")
 
     print("=" * 75)
 
