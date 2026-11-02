@@ -3,7 +3,6 @@
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Dataset](https://img.shields.io/badge/Data-Harvard%20Dataverse-orange.svg)](https://doi.org/10.7910/DVN/HIBCFL)
-[![Paper](https://img.shields.io/badge/Research%20Paper-LaTeX%20PDF-red.svg)](paper/final_makalah_naive_bayes.pdf)
 
 An end-to-end mathematical analysis, empirical modeling, and critical evaluation of **Gaussian Naïve Bayes** for clinical diagnosis. This project examines the trade-offs of the *conditional independence assumption*, implements biologically sound preprocessing, and evaluates diagnostic performance across multiple holdout and cross-validation protocols.
 
@@ -17,7 +16,7 @@ This project investigates:
 1. **Mathematical Foundations**: Derivation of Bayes' Theorem, log-transformed Maximum A Posteriori (MAP) inference, and Gaussian likelihood parameters.
 2. **Empirical Evaluation**: Implementation on the **Pima Indians Diabetes Dataset** (sourced from Harvard Dataverse `doi:10.7910/DVN/HIBCFL` & Kaggle), alongside auxiliary benchmarks (Breast Cancer Wisconsin & Framingham Heart Disease).
 3. **Clinical Risk & Error Analysis**: Exploring the tension between *Precision* and *Recall* when false negatives carry severe diagnostic consequences.
-4. **Research Paper**: Complete academic paper compiled from LaTeX adhering to rigorous scientific standards.
+4. **Self-Contained Report**: Complete technical synthesis, mathematical proofs, and empirical findings documented directly in this README.
 
 ---
 
@@ -116,12 +115,10 @@ A common critique in applied statistical learning is that Naïve Bayes relies on
 │   ├── heart_disease.csv            # Benchmark dataset (Framingham Heart Study)
 │   ├── hasil_eksperimen.json        # Serialized empirical results
 │   └── README.md                    # Data provenance and DOI documentation
-├── paper/
-│   └── final_makalah_naive_bayes.pdf# Full academic research paper (PDF)
 ├── run_experiment.py                # Standalone reproducible execution script
 ├── requirements.txt                 # Python dependencies
 ├── LICENSE                          # MIT License
-└── README.md                        # Portfolio documentation
+└── README.md                        # Portfolio documentation & technical report
 ```
 
 ---
