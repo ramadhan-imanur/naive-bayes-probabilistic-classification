@@ -198,21 +198,33 @@ code/
 │   └── README.md                      # Dokumentasi komprehensif dataset klinis & DOI
 ├── models/                            # Artefak model & serializer bobot
 │   └── gaussian_nb.joblib             # Model Gaussian Naïve Bayes terlatih
+├── notebooks/                         # Notebook eksplorasi & evaluasi visual interaktif
+│   └── 01_evaluasi_model_naive_bayes.ipynb # Analisis evaluasi lengkap & visualisasi kurva ROC/PR/Likelihood
 ├── outputs/
+│   ├── figures/                       # Grafik visualisasi resolusi tinggi (300 DPI)
+│   │   ├── 01_distribusi_likelihood_fitur.png
+│   │   ├── 02_korelasi_fitur_independensi.png
+│   │   ├── 03_matriks_konfusi.png
+│   │   ├── 04_kurva_roc_dan_pr.png
+│   │   ├── 05_tuning_ambang_batas_keputusan.png
+│   │   └── 06_validasi_silang_5fold.png
 │   └── metrics/
 │       └── hasil_eksperimen.json      # Serialisasi metrik evaluasi & parameter model
 ├── scripts/
+│   ├── generate_evaluation_notebook.py# Otomasi rendering notebook evaluasi & grafis
 │   └── simulate_categorical_nb.py     # Simulasi Naïve Bayes kategorikal & Laplace smoothing
 ├── src/
 │   ├── __init__.py                    # Inisialisasi paket Python modular
 │   ├── data.py                        # Pipeline pemuatan, imputasi biologis, dan partisi data
 │   ├── models.py                      # Abstraksi parametrik Gaussian Naïve Bayes
-│   └── evaluation.py                  # Evaluasi metrik, cross-validation, dan analisis galat
+│   ├── evaluation.py                  # Evaluasi metrik, cross-validation, dan analisis galat
+│   └── visualization.py               # Pembuatan heatmap matriks konfusi, kurva ROC/PR, & KDE
 ├── tests/
 │   ├── __init__.py
 │   ├── test_data.py                   # Pengujian unit pra-pemrosesan data
 │   ├── test_models.py                 # Pengujian unit model Gaussian Naïve Bayes
-│   └── test_evaluation.py             # Pengujian unit metrik evaluasi dan analisis galat
+│   ├── test_evaluation.py             # Pengujian unit metrik evaluasi dan analisis galat
+│   └── test_visualization.py          # Pengujian unit visualisasi grafis
 ├── LICENSE                            # Lisensi sumber terbuka MIT
 ├── pyproject.toml                     # Konfigurasi build sistem & dependensi proyek
 ├── README.md                          # Dokumentasi utama proyek
