@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 """
 Eksperimen Komputasi Pemodelan Gaussian Naïve Bayes Berbasis Dataset Publik.
-Mata Kuliah: Kecerdasan Buatan (Tugas 3: Project-Based Learning)
-Kelompok 3 - S-1 Matematika FMIPA Universitas Sebelas Maret
 
 Orkestrasi Pipeline Machine Learning End-to-End:
 1. Ingesti dan pra-pemrosesan data klinis (imputasi nilai nol biologis tidak valid).
@@ -15,8 +13,10 @@ Orkestrasi Pipeline Machine Learning End-to-End:
 """
 
 import argparse
-import sys
 from pathlib import Path
+import sys
+import numpy as np
+import pandas as pd
 
 # Menambahkan direktori root proyek ke sys.path
 PROJECT_ROOT = Path(__file__).resolve().parent
@@ -125,16 +125,17 @@ def main() -> None:
         f"1 (Positif) = {pos_count} sampel ({pos_count/n_samples*100:.1f}%)"
     )
 
-    # 3. Pra-pemrosesan Data (Imputasi Nilai Nol Biologis)
-    df_clean = clean_clinical_data(df_raw)
+    # 3. Partisi Data & Pra-pemrosesan Bebas Kebocoran (Zero Data Leakage)
+    # Partisi dilakukan pada data mentah terlebih dahulu; median dihitung HANYA dari data latih
     X_train, X_test, y_train, y_test, feature_names = prepare_splits(
-        df_clean,
+        df_raw,
         target_col="Outcome",
         test_size=args.test_size,
         random_state=args.random_state,
+        impute_missing=True,
     )
 
-    print(f"\n2. PARTISI DATA ({int((1-args.test_size)*100)}:{int(args.test_size*100)} STRATIFIKASI):")
+    print(f"\n2. PARTISI DATA ({int((1-args.test_size)*100)}:{int(args.test_size*100)} STRATIFIKASI TANPA KEBOCORAN):")
     print(f"   Data Latih (Train) : {len(X_train)} sampel")
     print(f"   Data Uji (Test)    : {len(X_test)} sampel")
 
@@ -145,11 +146,13 @@ def main() -> None:
     prior_0 = float(clf.class_prior_[0])
     prior_1 = float(clf.class_prior_[1])
     params_dict = clf.get_parameters_dict(feature_names)
+    epsilon_val = clf.epsilon_
 
     print("\n3. PARAMETER PELUANG HASIL PELATIHAN:")
-    print(f"   Prior P(Outcome = 0) : {prior_0:.4f}")
-    print(f"   Prior P(Outcome = 1) : {prior_1:.4f}")
-    print("\n   Parameter Likelihood Normal Gauss per Fitur:")
+    print(f"   Prior P(Outcome = 0) : {prior_0:.4f} (ln = {np.log(prior_0):.6f})")
+    print(f"   Prior P(Outcome = 1) : {prior_1:.4f} (ln = {np.log(prior_1):.6f})")
+    print(f"   Variance Smoothing epsilon_ : {epsilon_val:.6e}")
+    print("\n   Parameter Likelihood Normal Gauss per Fitur (4 Desimal):")
     print(f"   {'Fitur':<25} | {'Mean (Class 0)':<15} | {'Mean (Class 1)':<15} | {'Var (Class 0)':<15} | {'Var (Class 1)':<15}")
     print("   " + "-" * 90)
     for feat in feature_names:
@@ -157,7 +160,7 @@ def main() -> None:
         m1 = params_dict[feat]["mean_1"]
         v0 = params_dict[feat]["var_0"]
         v1 = params_dict[feat]["var_1"]
-        print(f"   {feat:<25} | {m0:<15.2f} | {m1:<15.2f} | {v0:<15.2f} | {v1:<15.2f}")
+        print(f"   {feat:<25} | {m0:<15.4f} | {m1:<15.4f} | {v0:<15.4f} | {v1:<15.4f}")
 
     # 5. Evaluasi pada Data Uji
     y_pred = clf.predict(X_test)
@@ -175,16 +178,19 @@ def main() -> None:
     print(f"   - Recall (Sensitivitas): {eval_metrics['recall']:.4f} ({eval_metrics['recall']*100:.2f}%)")
     print(f"   - F1-Score             : {eval_metrics['f1_score']:.4f} ({eval_metrics['f1_score']*100:.2f}%)")
 
-    # 6. Validasi Silang (K-Fold Stratified Cross-Validation)
+    # 6. Validasi Silang Bebas Kebocoran (K-Fold Pipeline Stratified Cross-Validation)
+    X_raw = df_raw.drop(columns=["Outcome"])
+    y_raw = df_raw["Outcome"]
     cv_summary = run_stratified_cv(
         clf.model,
-        df_clean.drop(columns=["Outcome"]),
-        df_clean["Outcome"],
+        X_raw,
+        y_raw,
         n_splits=args.cv_folds,
         random_state=args.random_state,
+        use_pipeline=True,
     )
 
-    print(f"\n5. VALIDASI SILANG {args.cv_folds}-FOLD STRATIFIKASI (KESTABILAN MODEL):")
+    print(f"\n5. VALIDASI SILANG {args.cv_folds}-FOLD STRATIFIKASI DENGAN PIPELINE (BEBAS LEAKAGE, ddof=1):")
     print(f"   - Akurasi Rata-rata    : {cv_summary['accuracy']['mean']:.4f} +/- {cv_summary['accuracy']['std']:.4f}")
     print(f"   - Presisi Rata-rata    : {cv_summary['precision']['mean']:.4f} +/- {cv_summary['precision']['std']:.4f}")
     print(f"   - Recall Rata-rata     : {cv_summary['recall']['mean']:.4f} +/- {cv_summary['recall']['std']:.4f}")
@@ -236,13 +242,17 @@ def main() -> None:
         except Exception as exc:
             print(f"[WARN] Gagal menyimpan model joblib: {exc}")
 
-        # Simpan processed dataset jika diminta
+        # Simpan processed dataset jika diminta (imputasi berbasis statistik data latih)
         if args.save_processed:
             proc_dir = PROJECT_ROOT / "data" / "processed"
             proc_dir.mkdir(parents=True, exist_ok=True)
             proc_path = proc_dir / "diabetes_pima_cleaned.csv"
+            df_clean = pd.concat([
+                pd.concat([X_train, y_train], axis=1),
+                pd.concat([X_test, y_test], axis=1)
+            ]).sort_index()
             df_clean.to_csv(proc_path, index=False)
-            print(f"[DATA] Data bersih tersimpan ke: {proc_path}")
+            print(f"[DATA] Data bersih (tanpa kebocoran) tersimpan ke: {proc_path}")
 
     print("=" * 75)
 

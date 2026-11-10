@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
 authors = [
-    {name = "Kelompok 3 - S-1 Matematika FMIPA UNS"}
+    {name = "Ramadhan Imanur"}
 ]
 keywords = [
     "machine-learning",

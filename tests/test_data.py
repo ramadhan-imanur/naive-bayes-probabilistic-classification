@@ -9,6 +9,7 @@ import pytest
 
 from src.data import (
     DEFAULT_ZERO_AS_MISSING,
+    ClinicalImputer,
     clean_clinical_data,
     load_dataset,
     prepare_splits,
@@ -70,3 +71,22 @@ def test_prepare_splits(dummy_clinical_df: pd.DataFrame):
     # Stratified balance: each split gets 1 zero and 1 one
     assert (y_train == 1).sum() == 1
     assert (y_test == 1).sum() == 1
+
+
+def test_clinical_imputer_no_data_leakage():
+    """
+    Memverifikasi bahwa ClinicalImputer hanya menggunakan data latih dan
+    tidak membocorkan statistik data uji.
+    """
+    train_data = pd.DataFrame({"Glucose": [0, 100, 120]})  # Valid: 100, 120 -> Median = 110
+    test_data = pd.DataFrame({"Glucose": [0, 200, 250]})   # Valid: 200, 250
+
+    imputer = ClinicalImputer(zero_as_missing_cols=["Glucose"])
+    imputer.fit(train_data)
+
+    assert imputer.medians_["Glucose"] == 110.0
+
+    # Transform test_data harus menggunakan median train (110.0), bukan median test (225.0)
+    transformed_test = imputer.transform(test_data)
+    assert transformed_test.loc[0, "Glucose"] == 110.0
+

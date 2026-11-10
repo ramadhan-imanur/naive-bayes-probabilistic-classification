@@ -10,11 +10,13 @@ Menyediakan fungsi komputasi untuk:
 
 import json
 from pathlib import Path
-from typing import Any, Dict, Union
+from typing import Any, Dict, List, Optional, Union
 import numpy as np
 import pandas as pd
 from sklearn.metrics import accuracy_score, confusion_matrix, f1_score, precision_score, recall_score
 from sklearn.model_selection import StratifiedKFold, cross_validate
+from sklearn.pipeline import Pipeline
+from src.data import ClinicalImputer
 
 
 def evaluate_predictions(y_true: Union[pd.Series, np.ndarray], y_pred: np.ndarray) -> Dict[str, Any]:
@@ -49,21 +51,37 @@ def run_stratified_cv(
     y: pd.Series,
     n_splits: int = 5,
     random_state: int = 42,
-) -> Dict[str, Dict[str, float]]:
+    use_pipeline: bool = True,
+) -> Dict[str, Any]:
     """
-    Melakukan K-Fold Stratified Cross-Validation untuk mengukur generalisasi model.
+    Melakukan K-Fold Stratified Cross-Validation untuk mengukur generalisasi model
+    secara ketat tanpa kebocoran data (zero data leakage).
+
+    Jika `use_pipeline=True` dan estimator belum berupa Pipeline, estimator dibungkus
+    dengan `ClinicalImputer` agar median dihitung eksklusif pada setiap fold pelatihan.
+    Deviasi standar dihitung menggunakan estimator tak bias (ddof=1) sesuai formula sampel:
+        s = sqrt( (1 / (K - 1)) * sum (m_k - bar{mu})^2 )
     """
+    if use_pipeline and not isinstance(estimator, Pipeline):
+        eval_pipeline = Pipeline([
+            ("imputer", ClinicalImputer()),
+            ("classifier", estimator),
+        ])
+    else:
+        eval_pipeline = estimator
+
     skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=random_state)
     scoring = ["accuracy", "precision", "recall", "f1"]
-    cv_res = cross_validate(estimator, X, y, cv=skf, scoring=scoring)
+    cv_res = cross_validate(eval_pipeline, X, y, cv=skf, scoring=scoring)
 
-    summary: Dict[str, Dict[str, float]] = {}
+    summary: Dict[str, Any] = {}
     for metric in scoring:
         key = f"test_{metric}"
         scores = cv_res[key]
         summary[metric] = {
             "mean": float(np.mean(scores)),
-            "std": float(np.std(scores)),
+            "std": float(np.std(scores, ddof=1)),
+            "scores": [float(s) for s in scores],
         }
     return summary
 

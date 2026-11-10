@@ -63,6 +63,10 @@ class GaussianNBClassifier:
     def var_(self) -> np.ndarray:
         return self.model.var_
 
+    @property
+    def epsilon_(self) -> float:
+        return float(self.model.epsilon_)
+
     def get_parameters_dict(self, feature_names: List[str]) -> Dict[str, Dict[str, float]]:
         """
         Mengekstrak parameter Likelihood Gauss (mean & variance) untuk setiap fitur per kelas.

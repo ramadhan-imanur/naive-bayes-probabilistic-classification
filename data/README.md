@@ -1,6 +1,6 @@
-# Dokumentasi Dataset Publik (Tugas 3: Naïve Bayes)
+# Dokumentasi Dataset Klinis
 
-Direktori ini memuat dataset publik riil yang telah diunduh dari repositori ilmiah terbuka **Harvard Dataverse** dan memiliki padanan resmi pada **Kaggle Datasets**. Dataset ini disiapkan khusus untuk eksperimen pemodelan klasifikasi **Naïve Bayes**, evaluasi kinerja (*Confusion Matrix*, Akurasi, Presisi, *Recall*, *F1-Score*), dan analisis kritis pada Tugas 3.
+Dataset di sini berasal dari repositori terbuka **Harvard Dataverse** dan **Kaggle Datasets**. Data disiapkan untuk pemodelan klasifikasi **Naïve Bayes**, evaluasi matriks konfusi (*Accuracy*, *Precision*, *Recall*, *F1-Score*), serta analisis pelanggaran asumsi independensi bersyarat dan risiko galat medis.
 
 ---
 
@@ -12,7 +12,7 @@ Direktori ini memuat dataset publik riil yang telah diunduh dari repositori ilmi
   - **Kaggle**: [Pima Indians Diabetes Database (UCI Machine Learning)](https://www.kaggle.com/datasets/uciml/pima-indians-diabetes-database)
 - **Dimensi**: 768 baris pengamatan, 9 kolom (8 fitur prediktor + 1 target kelas).
 - **Format Berkas**: Comma-Separated Values (`diabetes_pima.csv`).
-- **Tipe Tugas**: Klasifikasi Biner (*Binary Classification*).
+- **Jenis Permasalahan**: Klasifikasi Biner (*Binary Classification*).
 - **Distribusi Target (`Outcome`)**:
   - `0` (Negatif Diabetes): 500 sampel (65,1%)
   - `1` (Positif Diabetes): 268 sampel (34,9%)

@@ -41,7 +41,7 @@ def test_run_stratified_cv():
     y = pd.Series([0] * 30 + [1] * 30)
 
     clf = GaussianNB()
-    cv_summary = run_stratified_cv(clf, X, y, n_splits=3, random_state=42)
+    cv_summary = run_stratified_cv(clf, X, y, n_splits=3, random_state=42, use_pipeline=False)
 
     assert "accuracy" in cv_summary
     assert "precision" in cv_summary
@@ -50,6 +50,10 @@ def test_run_stratified_cv():
 
     assert 0.0 <= cv_summary["accuracy"]["mean"] <= 1.0
     assert cv_summary["accuracy"]["std"] >= 0.0
+    # Verifikasi bahwa std tak bias (ddof=1) dihitung dengan benar
+    scores = cv_summary["accuracy"]["scores"]
+    expected_std = float(np.std(scores, ddof=1))
+    assert np.isclose(cv_summary["accuracy"]["std"], expected_std)
 
 
 def test_analyze_errors():

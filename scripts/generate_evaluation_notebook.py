@@ -22,7 +22,7 @@ import pandas as pd
 CODE_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(CODE_ROOT))
 
-from src.data import clean_clinical_data, load_dataset, prepare_splits
+from src.data import ClinicalImputer, load_dataset, prepare_splits
 from src.evaluation import analyze_errors, evaluate_predictions, run_stratified_cv
 from src.models import GaussianNBClassifier
 from src.visualization import (
@@ -49,14 +49,16 @@ def build_notebook():
     fig_dir = CODE_ROOT / "outputs" / "figures"
     fig_dir.mkdir(parents=True, exist_ok=True)
 
-    print("Memuat dataset dan menjalankan kalkulasi evaluasi...")
+    print("Memuat dataset dan menjalankan kalkulasi evaluasi tanpa kebocoran data...")
     raw_path = CODE_ROOT / "data" / "raw" / "diabetes_pima.csv"
     df_raw = load_dataset(raw_path)
-    df_clean = clean_clinical_data(df_raw)
 
     X_train, X_test, y_train, y_test, feature_names = prepare_splits(
-        df_clean, target_col="Outcome", test_size=0.20, random_state=42
+        df_raw, target_col="Outcome", test_size=0.20, random_state=42, impute_missing=True
     )
+    df_clean = pd.concat(
+        [pd.concat([X_train, y_train], axis=1), pd.concat([X_test, y_test], axis=1)]
+    ).sort_index()
 
     clf = GaussianNBClassifier()
     clf.fit(X_train, y_train)
@@ -66,7 +68,14 @@ def build_notebook():
 
     eval_metrics = evaluate_predictions(y_test, y_pred)
     cm = eval_metrics["confusion_matrix"]
-    cv_summary = run_stratified_cv(clf.model, df_clean.drop(columns=["Outcome"]), df_clean["Outcome"], n_splits=5, random_state=42)
+    cv_summary = run_stratified_cv(
+        clf.model,
+        df_raw.drop(columns=["Outcome"]),
+        df_raw["Outcome"],
+        n_splits=5,
+        random_state=42,
+        use_pipeline=True,
+    )
     err_analysis = analyze_errors(X_test, y_test, y_pred)
 
     # 1. Generate Figures
@@ -99,12 +108,10 @@ def build_notebook():
         "source": [
             "# Evaluasi Menyeluruh Model Gaussian Naïve Bayes\n",
             "### Kasus Klasifikasi Klinis: Pima Indians Diabetes Database\n",
-            "**Mata Kuliah:** Kecerdasan Buatan (Tugas 3: Project-Based Learning)  \n",
-            "**Program Studi:** S-1 Matematika FMIPA Universitas Sebelas Maret  \n",
             "\n",
             "---\n",
             "\n",
-            "## 📌 Ringkasan Eksekutif & Tujuan Evaluasi\n",
+            "## Ringkasan Evaluasi\n",
             "\n",
             "Notebook ini dirancang secara sistematis untuk memfasilitasi evaluasi mendalam performa model **Gaussian Naïve Bayes** pada data klinis riil. Analisis berfokus pada:\n",
             "1. **Validasi Teori Probabilitas**: Menilai implikasi pelanggaran *asumsi independensi bersyarat* pada fitur berkorelasi tinggi.\n",
@@ -146,7 +153,7 @@ def build_notebook():
             "if str(ROOT_DIR) not in sys.path:\n",
             "    sys.path.insert(0, str(ROOT_DIR))\n",
             "\n",
-            "from src.data import load_dataset, clean_clinical_data, prepare_splits\n",
+            "from src.data import ClinicalImputer, load_dataset, prepare_splits\n",
             "from src.models import GaussianNBClassifier\n",
             "from src.evaluation import evaluate_predictions, run_stratified_cv, analyze_errors\n",
             "from src.visualization import (\n",
@@ -181,20 +188,27 @@ def build_notebook():
                     "Distribusi Kelas 0   : 500 sampel (65.1%) [Non-Diabetes]\n",
                     "Distribusi Kelas 1   : 268 sampel (34.9%) [Diabetes]\n",
                     "----------------------------------------------------------------------\n",
-                    "Imputasi Nilai Nol Biologis (Masked Missing Values):\n",
-                    "• Insulin       : 374 nilai nol digantikan nilai median (125.00)\n",
-                    "• SkinThickness : 227 nilai nol digantikan nilai median (29.00)\n",
-                    "• BloodPressure : 35 nilai nol digantikan nilai median (72.00)\n",
-                    "• BMI           : 11 nilai nol digantikan nilai median (32.30)\n",
-                    "• Glucose       : 5 nilai nol digantikan nilai median (117.00)\n",
+                    "Imputasi Nilai Nol Biologis (Fit Khusus Data Latih — Zero Data Leakage):\n",
+                    "• Insulin       : 374 nilai nol terdeteksi, median latih = 126.00\n",
+                    "• SkinThickness : 227 nilai nol terdeteksi, median latih = 29.00\n",
+                    "• BloodPressure : 35 nilai nol terdeteksi, median latih = 72.00\n",
+                    "• BMI           : 11 nilai nol terdeteksi, median latih = 32.00\n",
+                    "• Glucose       : 5 nilai nol terdeteksi, median latih = 118.00\n",
                     "======================================================================\n"
                 ]
             }
         ],
         "source": [
-            "# 2. Ingesti & Pra-pemrosesan Data Klinis\n",
+            "# 2. Ingesti & Pra-pemrosesan Data Klinis (Zero Data Leakage)\n",
             "data_path = ROOT_DIR / \"data\" / \"raw\" / \"diabetes_pima.csv\"\n",
             "df_raw = load_dataset(data_path)\n",
+            "\n",
+            "X_train, X_test, y_train, y_test, feature_names = prepare_splits(\n",
+            "    df_raw, target_col=\"Outcome\", test_size=0.20, random_state=42, impute_missing=True\n",
+            ")\n",
+            "df_clean = pd.concat(\n",
+            "    [pd.concat([X_train, y_train], axis=1), pd.concat([X_test, y_test], axis=1)]\n",
+            ").sort_index()\n",
             "\n",
             "print(\"=\" * 70)\n",
             "print(\" PROFIL DATASET PIMA INDIANS DIABETES\")\n",
@@ -206,14 +220,13 @@ def build_notebook():
             "print(f\"Distribusi Kelas 0   : {neg_c} sampel ({neg_c/len(df_raw)*100:.1f}%) [Non-Diabetes]\")\n",
             "print(f\"Distribusi Kelas 1   : {pos_c} sampel ({pos_c/len(df_raw)*100:.1f}%) [Diabetes]\")\n",
             "print(\"-\" * 70)\n",
-            "print(\"Imputasi Nilai Nol Biologis (Masked Missing Values):\")\n",
-            "zero_cols = ['Insulin', 'SkinThickness', 'BloodPressure', 'BMI', 'Glucose']\n",
-            "for col in zero_cols:\n",
+            "print(\"Imputasi Nilai Nol Biologis (Fit Khusus Data Latih — Zero Data Leakage):\")\n",
+            "X_tr_raw, _, _, _, _ = prepare_splits(df_raw, target_col=\"Outcome\", test_size=0.20, random_state=42, impute_missing=False)\n",
+            "imputer = ClinicalImputer().fit(X_tr_raw)\n",
+            "for col in ['Insulin', 'SkinThickness', 'BloodPressure', 'BMI', 'Glucose']:\n",
             "    zeros = (df_raw[col] == 0).sum()\n",
-            "    med = df_raw[df_raw[col] > 0][col].median()\n",
-            "    print(f\"• {col:<14}: {zeros} nilai nol digantikan nilai median ({med:.2f})\")\n",
-            "\n",
-            "df_clean = clean_clinical_data(df_raw)\n",
+            "    med = imputer.medians_[col]\n",
+            "    print(f\"• {col:<14}: {zeros} nilai nol terdeteksi, median latih = {med:.2f}\")\n",
             "print(\"=\" * 70)"
         ]
     })
@@ -260,7 +273,7 @@ def build_notebook():
         "metadata": {},
         "source": [
             "> **Insight Klinis Distribusi Likelihood:**\n",
-            ">- **Pemisah Terbaik**: `Glucose` menunjukkan pergeseran rata-rata terbesar (Kelas 0: $111{,}85$ mg/dL vs Kelas 1: $141{,}32$ mg/dL). Pasien diabetes memiliki puncak densitas jauh lebih ke kanan.\n",
+            ">- **Pemisah Terbaik**: `Glucose` menunjukkan pergeseran rata-rata terbesar (Kelas 0: $111{,}86$ mg/dL vs Kelas 1: $141{,}33$ mg/dL pada data latih). Pasien diabetes memiliki puncak densitas jauh lebih ke kanan.\n",
             ">- **Biomarker Tambahan**: `BMI` ($30{,}85$ vs $35{,}27$) dan `Age` ($31{,}42$ vs $37{,}40$) menunjukkan separasi yang jelas, mengonfirmasi pengaruh obesitas dan usia terhadap resistensi insulin.\n",
             ">- **Fitur Tumpang-Tindih**: `BloodPressure` dan `SkinThickness` memiliki kurva yang relatif berhimpitan, menyiratkan daya diskriminasi individual yang lebih rendah."
         ]
@@ -346,10 +359,6 @@ def build_notebook():
         ],
         "source": [
             "# 5. Pelatihan Model & Inferensi Data Uji\n",
-            "X_train, X_test, y_train, y_test, _ = prepare_splits(\n",
-            "    df_clean, target_col=\"Outcome\", test_size=0.20, random_state=42\n",
-            ")\n",
-            "\n",
             "clf = GaussianNBClassifier()\n",
             "clf.fit(X_train, y_train)\n",
             "\n",
@@ -432,8 +441,8 @@ def build_notebook():
         "metadata": {},
         "source": [
             "> **Analisis Area di Bawah Kurva (AUC):**\n",
-            ">- **Nilai ROC-AUC**: Sebesar **0,832**, mengindikasikan kapasitas diskriminasi yang sangat baik (jauh di atas tebakan acak 0,500).\n",
-            ">- **PR-AUC**: Sebesar **0,733** (jauh di atas baseline prevalensi 0,351), menunjukkan bahwa probabilitas prediksi positif model memiliki daya prediksi yang kokoh."
+            ">- **Nilai ROC-AUC**: Sebesar **0,838**, mengindikasikan kapasitas diskriminasi yang sangat baik (jauh di atas tebakan acak 0,500).\n",
+            ">- **PR-AUC**: Sebesar **0,666** (jauh di atas baseline prevalensi 0,351), menunjukkan bahwa probabilitas prediksi positif model memiliki daya prediksi yang kokoh."
         ]
     })
 
@@ -487,8 +496,8 @@ def build_notebook():
         "metadata": {},
         "source": [
             "> **Rekomendasi Ambang Batas Klinis:**\n",
-            ">- Menurunkan ambang batas ke $\\tau = 0{,}35$ menaikkan Sensitivitas (*Recall*) dari **59,26%** menjadi **74,07%**, dan memangkas kasus diabetes yang terlewat (*False Negative*) dari **22 pasien menjadi hanya 14 pasien**.\n",
-            ">- Konsekuensinya, *False Positive* bertambah dari 16 menjadi 29 pasien (pasien sehat yang memerlukan uji glukosa toleransi oral ulang), yang dalam protokol klinis jauh lebih dapat diterima daripada membiarkan pasien diabetes tanpa terapi."
+            ">- Menurunkan ambang batas ke $\\tau = 0{,}35$ menaikkan Sensitivitas (*Recall*) dari **59,26%** menjadi **66,67%** dan meningkatkan *F1-Score* dari **62,75%** menjadi **65,45%**, sekaligus memangkas kasus diabetes yang terlewat (*False Negative*) dari **22 menjadi 18 pasien** pada akurasi tetap **75,32%** (dengan penambahan *False Positive* dari 16 menjadi 20 pasien).\n",
+            ">- Apabila prioritas skrining menuntut sensitivitas lebih agresif ($>70\\%$), ambang $\\tau = 0{,}30$ menghasilkan *Recall* **70,37%** (FN = 16, F1 = **66,67%**), sedangkan $\\tau = 0{,}20$ mencapai *Recall* **85,19%** (FN = 8)."
         ]
     })
 
@@ -518,8 +527,8 @@ def build_notebook():
             }
         ],
         "source": [
-            "# 9. Visualisasi Kestabilan 5-Fold Cross-Validation\n",
-            "cv_summary = run_stratified_cv(clf.model, df_clean.drop(columns=['Outcome']), df_clean['Outcome'], n_splits=5, random_state=42)\n",
+            "# 9. Visualisasi Kestabilan 5-Fold Cross-Validation (Zero Data Leakage)\n",
+            "cv_summary = run_stratified_cv(clf.model, df_raw.drop(columns=['Outcome']), df_raw['Outcome'], n_splits=5, random_state=42, use_pipeline=True)\n",
             "fig_cv = plot_cross_validation_stability(cv_summary)\n",
             "plt.show()"
         ]
@@ -530,11 +539,11 @@ def build_notebook():
         "metadata": {},
         "source": [
             "> **Rangkuman Stabilitas:**\n",
-            ">- **Akurasi Rata-rata**: $74{,}48\\% \\pm 3{,}13\\%$\n",
-            ">- **Presisi Rata-rata**: $64{,}75\\% \\pm 5{,}12\\%$\n",
-            ">- **Recall Rata-rata**: $59{,}37\\% \\pm 6{,}44\\%$\n",
-            ">- **F1-Score Rata-rata**: $61{,}80\\% \\pm 5{,}11\\%$\n",
-            "> Deviasi standar yang rendah ($< 3{,}2\\%$ untuk akurasi) membuktikan model memiliki variansi yang terkendali dengan baik (*low estimation variance*)."
+            ">- **Akurasi Rata-rata**: $74{,}35\\% \\pm 3{,}70\\%$\n",
+            ">- **Presisi Rata-rata**: $64{,}49\\% \\pm 6{,}07\\%$\n",
+            ">- **Recall Rata-rata**: $59{,}37\\% \\pm 7{,}20\\%$\n",
+            ">- **F1-Score Rata-rata**: $61{,}69\\% \\pm 5{,}92\\%$\n",
+            "> Deviasi standar akurasi sebesar $3{,}70\\%$ melintasi 5 lipatan bebas kebocoran data membuktikan model memiliki generalisasi yang stabil (*low estimation variance*)."
         ]
     })
 
@@ -559,11 +568,11 @@ def build_notebook():
                 "output_type": "stream",
                 "text": [
                     "Analisis Sampel False Negative (FN = 22 Pasien Diabetes yang Gagal Terdeteksi):\n",
-                    "Rata-rata Glukosa Pasien FN : 117.82 mg/dL (Mendekati rata-rata kelas sehat 111.85 mg/dL!)\n",
-                    "Rata-rata BMI Pasien FN     : 32.88 kg/m²\n",
-                    "Rata-rata Usia Pasien FN    : 34.05 tahun\n",
-                    "Kesimpulan: Pasien diabetes pada kelompok FN memiliki profil glukosa atypically normal,\n",
-                    "sehingga model probabilitas Gaussian menetapkan likelihood yang lebih tinggi untuk Kelas 0.\n"
+                    "Rata-rata Glukosa Pasien FN : 130.09 mg/dL (Zona tumpang tindih antara 111.86 dan 141.33 mg/dL)\n",
+                    "Rata-rata BMI Pasien FN     : 33.28 kg/m²\n",
+                    "Rata-rata Usia Pasien FN    : 32.09 tahun (Mendekati rata-rata kelas sehat 31.42 tahun)\n",
+                    "Kesimpulan: Profil glukosa dan usia moderat pada kelompok FN berinteraksi dengan prior kelas sehat (65.15%),\n",
+                    "sehingga model probabilitas Gaussian menetapkan likelihood posterior yang lebih tinggi untuk Kelas 0.\n"
                 ]
             }
         ],
@@ -574,11 +583,11 @@ def build_notebook():
             "df_fn['Predicted_Prob_Diabetes'] = y_proba[fn_mask]\n",
             "\n",
             "print(\"Analisis Sampel False Negative (FN = 22 Pasien Diabetes yang Gagal Terdeteksi):\")\n",
-            "print(f\"Rata-rata Glukosa Pasien FN : {df_fn['Glucose'].mean():.2f} mg/dL (Mendekati rata-rata kelas sehat 111.85 mg/dL!)\")\n",
+            "print(f\"Rata-rata Glukosa Pasien FN : {df_fn['Glucose'].mean():.2f} mg/dL (Zona tumpang tindih antara 111.86 dan 141.33 mg/dL)\")\n",
             "print(f\"Rata-rata BMI Pasien FN     : {df_fn['BMI'].mean():.2f} kg/m²\")\n",
-            "print(f\"Rata-rata Usia Pasien FN    : {df_fn['Age'].mean():.2f} tahun\")\n",
-            "print(\"Kesimpulan: Pasien diabetes pada kelompok FN memiliki profil glukosa atypically normal,\")\n",
-            "print(\"sehingga model probabilitas Gaussian menetapkan likelihood yang lebih tinggi untuk Kelas 0.\")"
+            "print(f\"Rata-rata Usia Pasien FN    : {df_fn['Age'].mean():.2f} tahun (Mendekati rata-rata kelas sehat 31.42 tahun)\")\n",
+            "print(\"Kesimpulan: Profil glukosa dan usia moderat pada kelompok FN berinteraksi dengan prior kelas sehat (65.15%),\")\n",
+            "print(\"sehingga model probabilitas Gaussian menetapkan likelihood posterior yang lebih tinggi untuk Kelas 0.\")"
         ]
     })
 
@@ -589,7 +598,7 @@ def build_notebook():
         "source": [
             "## 8. Kesimpulan & Rekomendasi Terapan\n",
             "\n",
-            "1. **Kekuatan Gaussian Naïve Bayes**: Menghasilkan akurasi 75,32% dan AUC-ROC 0,832 dengan kompleksitas komputasi pelatihan linear $O(nd)$, menjadikannya sangat efisien untuk screening data klinis berskala besar.\n",
+            "1. **Kekuatan Gaussian Naïve Bayes**: Menghasilkan akurasi 75,32% dan AUC-ROC 0,838 dengan kompleksitas komputasi pelatihan linear $O(nd)$, menjadikannya sangat efisien untuk screening data klinis berskala besar.\n",
             "2. **Mitigasi Pelanggaran Asumsi**: Kendati fitur seperti BMI-SkinThickness berkorelasi moderat ($r = 0{,}54$), aturan klasifikasi MAP tetap menghasilkan boundary keputusan yang optimal.\n",
             "3. **Rekomendasi Kebijakan Diagnostik**: Dalam deployment klinis penapisan awal, terapkan ambang batas $\\tau = 0{,}35$ guna meminimalkan risiko pasien diabetes yang luput dari penanganan."
         ]

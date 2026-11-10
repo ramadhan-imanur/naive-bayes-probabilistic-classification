@@ -1,7 +1,5 @@
 """
 Probabilistic Machine Learning - Gaussian Naïve Bayes Clinical Modeling
-Mata Kuliah: Kecerdasan Buatan (Tugas 3: Project-Based Learning)
-Program Studi S-1 Matematika FMIPA Universitas Sebelas Maret
 """
 
 from .data import load_dataset, clean_clinical_data, prepare_splits
